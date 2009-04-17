@@ -1,0 +1,13 @@
+Google Hash Library Bindings for Ruby
+-------------------------------------
+
+See: http://code.google.com/p/google-sparsehash/
+
+
+Ruby Bindings
+-------------
+see: ext/test.rb
+
+
+
+The sparse hash is very memory efficient
