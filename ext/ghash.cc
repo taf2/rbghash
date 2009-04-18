@@ -23,6 +23,10 @@ static VALUE rb_DenseSet;
 static 
 void SparseSet_free( GRB::SparseSet *gset )
 {
+  // free all keys
+  for( GRB::SparseSet::iterator it = gset->begin(); it != gset->end(); ++it ) {
+    free((void*)*it);
+  }
   delete gset;
 }
 
@@ -44,7 +48,12 @@ VALUE SparseSet_insert( VALUE self, VALUE key )
   GRB::SparseSet *gset;
   Data_Get_Struct( self, GRB::SparseSet, gset );
 
-  gset->insert(RSTRING_PTR(key));
+  if( TYPE(key) == T_STRING ) {
+    gset->insert(strdup(RSTRING_PTR(key)));
+  }
+  else {
+    rb_raise(rb_eRuntimeError, "Invalid key Type not equal to String");
+  }
 
   return key;
 }
@@ -54,10 +63,11 @@ VALUE SparseSet_lookup( VALUE self, VALUE key )
 {
   GRB::SparseSet *gset;
   Data_Get_Struct( self, GRB::SparseSet, gset );
+  const char *pkey = RSTRING_PTR(key);
 
-  GRB::SparseSet::const_iterator it = gset->find(RSTRING_PTR(key));
+  GRB::SparseSet::const_iterator it = gset->find(pkey);
 
-  return it == gset->end() ? Qfalse : Qtrue;
+  return (it == gset->end()) ? Qfalse : Qtrue;
 }
 
 static 
@@ -65,17 +75,62 @@ VALUE SparseSet_delete( VALUE self, VALUE key )
 {
   GRB::SparseSet *gset;
   Data_Get_Struct( self, GRB::SparseSet, gset );
+  const char *pkey = RSTRING_PTR(key);
+  GRB::SparseSet::iterator it = gset->find(pkey);
 
-  gset->set_deleted_key(RSTRING_PTR(key));
-  gset->erase(RSTRING_PTR(key));
+  gset->set_deleted_key(*it);
+  gset->erase(it);
+  free((void*)*it);
   gset->clear_deleted_key();
 
   return key;
+}
+
+static 
+VALUE SparseSet_save( VALUE self, VALUE fname )
+{
+  GRB::SparseSet *gset;
+  Data_Get_Struct( self, GRB::SparseSet, gset );
+
+  FILE *f = fopen(RSTRING_PTR(fname),"wb");
+  if( !f ) {
+    rb_raise(rb_eRuntimeError,"File not found");
+  }
+
+  gset->write_metadata(f);
+  gset->write_nopointer_data(f);
+
+  fclose(f);
+
+  return Qnil;
+}
+
+static 
+VALUE SparseSet_load( VALUE self, VALUE fname )
+{
+  GRB::SparseSet *gset;
+  Data_Get_Struct( self, GRB::SparseSet, gset );
+
+  FILE *f = fopen(RSTRING_PTR(fname),"rb");
+  if( !f ) {
+    rb_raise(rb_eRuntimeError,"File not found");
+  }
+
+  gset->read_metadata(f);
+  gset->read_nopointer_data(f);
+
+  fclose(f);
+
+  return Qnil;
 }
 /** end sparse **/
 static 
 void DenseSet_free( GRB::DenseSet *gset )
 {
+  // free all keys
+  for( GRB::DenseSet::iterator it = gset->begin(); it != gset->end(); ++it ) {
+    free((void*)*it);
+  }
   delete gset;
 }
 
@@ -99,7 +154,12 @@ VALUE DenseSet_insert( VALUE self, VALUE key )
   GRB::DenseSet *gset;
   Data_Get_Struct( self, GRB::DenseSet, gset );
 
-  gset->insert(RSTRING_PTR(key));
+  if( TYPE(key) == T_STRING ) {
+    gset->insert(strdup(RSTRING_PTR(key)));
+  }
+  else {
+    rb_raise(rb_eRuntimeError, "Invalid key Type not equal to String");
+  }
 
   return key;
 }
@@ -120,10 +180,14 @@ VALUE DenseSet_delete( VALUE self, VALUE key )
 {
   GRB::DenseSet *gset;
   Data_Get_Struct( self, GRB::DenseSet, gset );
+  const char *pkey = RSTRING_PTR(key);
+  GRB::DenseSet::iterator it = gset->find(pkey);
 
-  gset->set_deleted_key(RSTRING_PTR(key));
-  gset->erase(RSTRING_PTR(key));
+  gset->set_deleted_key(*it);
+  gset->erase(it);
+  free((void*)*it);
   gset->clear_deleted_key();
+
 
   return key;
 }
@@ -135,14 +199,20 @@ void Init_ghash_core()
 
   rb_define_alloc_func( rb_SparseSet, SparseSet_alloc );
   rb_define_method( rb_SparseSet, "insert", RB_CALL(SparseSet_insert), 1 );
+  rb_define_method( rb_SparseSet, "[]=", RB_CALL(SparseSet_insert), 2 );
   rb_define_method( rb_SparseSet, "lookup", RB_CALL(SparseSet_lookup), 1 );
+  rb_define_method( rb_SparseSet, "key?", RB_CALL(SparseSet_lookup), 1 );
   rb_define_method( rb_SparseSet, "delete", RB_CALL(SparseSet_delete), 1 );
+  rb_define_method( rb_SparseSet, "save", RB_CALL(SparseSet_save), 1 );
+  rb_define_method( rb_SparseSet, "load", RB_CALL(SparseSet_load), 1 );
 
   rb_DenseSet = rb_define_class( "DenseSet", rb_cObject );
 
   rb_define_alloc_func( rb_DenseSet, DenseSet_alloc );
   rb_define_method( rb_DenseSet, "insert", RB_CALL(DenseSet_insert), 1 );
+  rb_define_method( rb_DenseSet, "[]=", RB_CALL(DenseSet_insert), 2 );
   rb_define_method( rb_DenseSet, "lookup", RB_CALL(DenseSet_lookup), 1 );
+  rb_define_method( rb_DenseSet, "key?", RB_CALL(DenseSet_lookup), 1 );
   rb_define_method( rb_DenseSet, "delete", RB_CALL(DenseSet_delete), 1 );
 }
 

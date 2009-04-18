@@ -1,5 +1,6 @@
 require 'ghash_core'
 require 'test/unit'
+require 'benchmark'
 
 class TestGSet < Test::Unit::TestCase
   def setup
@@ -8,28 +9,47 @@ class TestGSet < Test::Unit::TestCase
     @rset = {}
   end
 
-  def test_set_get
-    t = Time.now
+=begin
+  def test_serialize
     n = 10000
     n.times do|i|
       @sparse_set.insert(i.to_s)
+    end
+    n.times do|i|
       assert @sparse_set.lookup(i.to_s)
     end
-    puts "Sparse Took #{Time.now - t} seconds to insert #{n} records"
+    @sparse_set.save "test.hash"
 
-    t = Time.now
+    tset = SparseSet.new
+    tset.load "test.hash"
     n.times do|i|
-      @dense_set.insert(i.to_s)
-      assert @dense_set.lookup(i.to_s)
+      assert @sparse_set.lookup(i.to_s)
+      assert tset.lookup(i.to_s)
     end
-    puts "Dense Took #{Time.now - t} seconds to insert #{n} records"
-    
-    t = Time.now
+  ensure
+    File.unlink("test.hash") if File.exist?("test.hash")
+  end
+=end
+
+
+  def test_set_get
+    n = 100000
+
+    Benchmark.bmbm do |x|
+      x.report("Sparse Set") { sample_set(@sparse_set, n) }
+      x.report("Dense Set") { sample_set(@dense_set, n) }
+      x.report("Ruby Hash") { sample_set(@rset, n) }
+    end
+
+  end
+
+  def sample_set(set, n)
     n.times do|i|
-      @rset[i.to_s] = nil
-      assert @rset.key?(i.to_s)
+      set[i.to_s] = nil
     end
-    puts "Ruby Took #{Time.now - t} seconds to insert #{n} records"
+    n.times do|i|
+      assert set.key?(i.to_s)
+    end
   end
 
 end
