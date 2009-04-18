@@ -9,9 +9,8 @@ class TestGSet < Test::Unit::TestCase
     @rset = {}
   end
 
-=begin
   def test_serialize
-    n = 10000
+    n = 1000
     n.times do|i|
       @sparse_set.insert(i.to_s)
     end
@@ -29,11 +28,9 @@ class TestGSet < Test::Unit::TestCase
   ensure
     File.unlink("test.hash") if File.exist?("test.hash")
   end
-=end
-
 
   def test_set_get
-    n = 100000
+    n = 10000
 
     Benchmark.bmbm do |x|
       x.report("Sparse Set") { sample_set(@sparse_set, n) }

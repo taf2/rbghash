@@ -98,7 +98,13 @@ VALUE SparseSet_save( VALUE self, VALUE fname )
   }
 
   gset->write_metadata(f);
-  gset->write_nopointer_data(f);
+  for( GRB::SparseSet::const_iterator it = gset->begin(); it != gset->end(); ++it ) {
+    // write the str len followed by the str
+    unsigned int len = strlen(*it);
+    fwrite(&len,sizeof(unsigned int), 1, f);
+    fwrite((*it), sizeof(char*),len,f);
+  }
+  //gset->write_nopointer_data(f);
 
   fclose(f);
 
@@ -117,7 +123,13 @@ VALUE SparseSet_load( VALUE self, VALUE fname )
   }
 
   gset->read_metadata(f);
-  gset->read_nopointer_data(f);
+  unsigned int len = 0;
+  for( GRB::SparseSet::iterator it = gset->begin(); it != gset->end(); ++it ) {
+    fread(&len, sizeof(unsigned int), 1, f);
+    const_cast<char*>(*it) = (char*)malloc(sizeof(char*)*len);
+    fread(const_cast<char*>(*it), sizeof(char*), len, f);
+  }
+//  gset->read_nopointer_data(f);
 
   fclose(f);
 
