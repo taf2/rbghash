@@ -28,6 +28,7 @@ void SparseSet_free( GRB::SparseSet *gset )
     free((void*)*it);
   }
   delete gset;
+  printf("freeing sparse set\n");
 }
 
 static

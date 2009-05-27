@@ -1,6 +1,8 @@
 require 'ghash_core'
 require 'test/unit'
 require 'benchmark'
+require 'rubygems'
+require 'rmem' # sudo gem install taf2-rmem # from github.com
 
 class TestGSet < Test::Unit::TestCase
   def setup
@@ -30,7 +32,7 @@ class TestGSet < Test::Unit::TestCase
   end
 
   def test_set_get
-    n = 10000
+    n = 100000
 
     Benchmark.bmbm do |x|
       x.report("Sparse Set") { sample_set(@sparse_set, n) }
